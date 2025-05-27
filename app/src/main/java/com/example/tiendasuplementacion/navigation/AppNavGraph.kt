@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,10 +159,12 @@ fun AppNavGraph(
                 composable("cart") { CartScreen(navController, cartViewModel) }
                 composable("payments") { PaymentScreen(navController) }
                 composable("orders") { 
+                    val context = LocalContext.current
                     OrderScreen(
                         navController = navController,
                         userDetailViewModel = viewModel(),
-                        authViewModel = authViewModel
+                        authViewModel = authViewModel,
+                        context = context
                     ) 
                 }
                 composable("admin_clients") {
@@ -224,4 +228,4 @@ fun AppNavGraph(
     }
 }
 
-data class NavBarItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) 
+data class NavBarItem(val route: String, val label: String, val icon: ImageVector) 

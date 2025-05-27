@@ -1,5 +1,6 @@
 package com.example.tiendasuplementacion.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,13 +25,27 @@ import androidx.compose.foundation.rememberScrollState
 import coil.compose.AsyncImage
 import com.example.tiendasuplementacion.model.UserOrder
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.painterResource
+import com.example.tiendasuplementacion.R
+import com.example.tiendasuplementacion.util.QRCodeGenerator
+import com.google.gson.Gson
+import android.content.Context
+import android.net.Uri
+import androidx.compose.ui.text.style.TextAlign
+import androidx.core.content.FileProvider
+import com.example.tiendasuplementacion.util.PdfGenerator
+import java.io.File
+import android.content.Intent
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderScreen(
     navController: NavController,
     userDetailViewModel: UserDetailViewModel = viewModel(),
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    context: Context
 ) {
     val userDetail by userDetailViewModel.userDetail.observeAsState()
     val isLoading by userDetailViewModel.isLoading.observeAsState(false)
@@ -181,16 +196,35 @@ fun OrderScreen(
     }
 
     if (showOrderDetails && selectedOrder != null) {
+        // Generate PDF when showing order details
+        val pdfPath = remember(selectedOrder) {
+            selectedOrder?.let { order ->
+                PdfGenerator.generateInvoicePdf(context, order)
+            } ?: ""
+        }
+
+        val pdfUri = remember(pdfPath) {
+            if (pdfPath.isNotEmpty()) {
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider",
+                    File(pdfPath)
+                )
+            } else null
+        }
+
         AlertDialog(
             onDismissRequest = { 
                 showOrderDetails = false
                 selectedOrder = null
             },
+            containerColor = Color.White,
             title = {
                 Text(
                     text = "Detalles del Pedido #${selectedOrder?.order_id}",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
                 )
             },
             text = {
@@ -199,93 +233,111 @@ fun OrderScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(vertical = 8.dp)
                 ) {
-                    // Información general del pedido
+                    // Información General
                     Text(
                         text = "Información General",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color(0xFF3F51B5)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Fecha: ${selectedOrder?.date_order}")
-                    Text("Estado: ${selectedOrder?.status?.name}")
-                    Text("Total: $${selectedOrder?.total}")
-                    Text("Cantidad de productos: ${selectedOrder?.total_products}")
-                    
+                    Text("Fecha: ${selectedOrder?.date_order}", color = Color.Black)
+                    Text("Estado: ${selectedOrder?.status?.name}", color = Color.Black)
+                    Text("Total: $${selectedOrder?.total}", color = Color.Black)
+                    Text("Cantidad de productos: ${selectedOrder?.total_products}", color = Color.Black)
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Información del método de pago
+
+                    // Información de Pago
                     Text(
                         text = "Información de Pago",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color(0xFF3F51B5)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     selectedOrder?.additionalInfoPayment?.let { paymentInfo ->
-                        if (paymentInfo.cardNumber != null) {
-                            Text("Número de tarjeta: •••• ${paymentInfo.cardNumber.takeLast(4)}")
-                            Text("Titular: ${paymentInfo.cardholderName}")
-                            Text("Vence: ${paymentInfo.expirationDate}")
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Dirección de facturación:")
-                        Text(buildString {
-                            append(paymentInfo.addressLine1)
-                            if (!paymentInfo.addressLine2.isNullOrBlank()) {
-                                append(", ${paymentInfo.addressLine2}")
-                            }
-                        })
-                        Text("${paymentInfo.city}, ${paymentInfo.stateOrProvince}")
-                        Text("${paymentInfo.country} ${paymentInfo.postalCode}")
+                        Text("Dirección de facturación:", color = Color.Black)
+                        Text(paymentInfo.addressLine1 ?: "", color = Color.Black)
+                        Text("${paymentInfo.city ?: ""}, ${paymentInfo.stateOrProvince ?: ""}", color = Color.Black)
+                        Text("${paymentInfo.country ?: ""} ${paymentInfo.postalCode ?: ""}", color = Color.Black)
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Lista de productos
+
+                    // Productos
                     Text(
                         text = "Productos",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = Color(0xFF3F51B5)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     selectedOrder?.products?.forEach { product ->
-                        Card(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
+                            AsyncImage(
+                                model = product.url_image,
+                                contentDescription = product.name,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                AsyncImage(
-                                    model = product.url_image,
-                                    contentDescription = product.name,
-                                    modifier = Modifier
-                                        .size(50.dp)
-                                        .clip(RoundedCornerShape(4.dp))
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = product.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Black
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = product.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "$${product.price}",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
+                                Text(
+                                    text = "$${product.price}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
                             }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Sección de Factura
+                    if (pdfUri != null) {
+                        Text(
+                            text = "Factura Digital",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF3F51B5)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Button(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(pdfUri, "application/pdf")
+                                    flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    Toast.makeText(
+                                        context,
+                                        "No se encontró una aplicación para abrir PDFs",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF3F51B5)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Ver Factura PDF")
                         }
                     }
                 }
@@ -297,7 +349,7 @@ fun OrderScreen(
                         selectedOrder = null
                     }
                 ) {
-                    Text("Cerrar")
+                    Text("Cerrar", color = Color(0xFF3F51B5))
                 }
             }
         )

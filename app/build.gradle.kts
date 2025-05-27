@@ -74,10 +74,10 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences-core:1.0.0")
 
     // Retrofit
-    implementation(libs.retrofit) // Retrofit
-    implementation(libs.retrofit.converter.gson) // Retrofit Converter Gson
-    implementation(libs.okhttp) // OkHttp
-    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3") // OkHttp Logging Interceptor
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
 
     // Gson for JSON parsing
     implementation(libs.gson)
@@ -88,10 +88,14 @@ dependencies {
     // Lifecycle and ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.livedata.ktx)
-
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.navigation.compose.android)
+    implementation("com.google.zxing:core:3.5.2")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
+    // PDF Generation
+    implementation("com.itextpdf:itext7-core:7.2.5")
+    implementation("com.itextpdf:html2pdf:4.0.5")
 
     // Testing
     testImplementation(libs.junit)
